@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SubStream</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@600;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="36" height="36" rx="9" fill="url(#logoGrad)"/>
+        <polygon points="11,9 27,18 11,27" fill="#0e0e14" opacity="0.9"/>
+        <rect x="8" y="26" width="20" height="2.5" rx="1.25" fill="#0e0e14" opacity="0.7"/>
+        <rect x="8" y="30" width="14" height="2.5" rx="1.25" fill="#0e0e14" opacity="0.5"/>
+        <defs>
+          <linearGradient id="logoGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#c8a96e"/>
+            <stop offset="100%" stop-color="#e8c07a"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div>
+        <span class="logo-title">SubStream</span>
+        <span class="logo-sub">Arabic Subtitles</span>
+      </div>
+    </div>
+    <div class="header-controls">
+      <label class="toggle-wrap" title="Enable/disable subtitles">
+        <input type="checkbox" id="toggleActive" checked />
+        <span class="toggle"></span>
+      </label>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="search">Search</button>
+    <button class="tab" data-tab="local">Local</button>
+    <button class="tab" data-tab="timing">Timing</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </nav>
+
+  <!-- SEARCH TAB -->
+  <section class="tab-content active" id="tab-search">
+    <div class="field-row">
+      <label>Search by</label>
+      <div class="seg-control">
+        <button class="seg active" data-search-mode="title">Title</button>
+        <button class="seg" data-search-mode="imdb">IMDB</button>
+        <button class="seg" data-search-mode="tmdb">TMDB</button>
+      </div>
+    </div>
+
+    <div class="field-group" id="searchByTitle">
+      <input type="text" id="searchTitle" class="input" placeholder="e.g. Money Heist" />
+      <div class="row-2">
+        <input type="number" id="searchSeason" class="input small" placeholder="Season" min="1" />
+        <input type="number" id="searchEpisode" class="input small" placeholder="Episode" min="1" />
+      </div>
+    </div>
+
+    <div class="field-group hidden" id="searchByID">
+      <input type="text" id="searchID" class="input" placeholder="ID value" />
+      <div class="row-2">
+        <input type="number" id="searchSeasonID" class="input small" placeholder="Season" min="1" />
+        <input type="number" id="searchEpisodeID" class="input small" placeholder="Episode" min="1" />
+      </div>
+    </div>
+
+    <button class="btn primary" id="btnSearch">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      Search SubDL
+    </button>
+
+    <div id="searchStatus" class="status-msg hidden"></div>
+    <div id="searchResults" class="results-list hidden"></div>
+  </section>
+
+  <!-- LOCAL TAB -->
+  <section class="tab-content hidden" id="tab-local">
+
+    <div class="upload-zone" id="singleDropZone">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <p>Drop an <strong>.srt</strong> file here</p>
+      <span>or click to browse</span>
+      <input type="file" id="fileInput" accept=".srt,.sub,.vtt" />
+    </div>
+
+    <div class="divider"><span>or load a folder</span></div>
+
+    <button class="btn secondary" id="btnLoadFolder">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+      Load Subtitle Folder
+    </button>
+    <input type="file" id="folderInput" webkitdirectory multiple accept=".srt,.sub,.vtt" style="display:none" />
+
+    <!-- Auto-advance toggle -->
+    <div class="advance-row" id="advanceRow" style="display:none">
+      <div class="advance-label">
+        <span class="advance-title">Auto-advance episodes</span>
+        <span class="advance-desc">Load next subtitle file when the video ends</span>
+      </div>
+      <label class="toggle-wrap">
+        <input type="checkbox" id="autoAdvanceToggle" />
+        <span class="toggle"></span>
+      </label>
+    </div>
+
+    <div id="folderLibrary" class="results-list hidden"></div>
+    <div id="localStatus" class="status-msg hidden"></div>
+  </section>
+
+  <!-- TIMING TAB -->
+  <section class="tab-content hidden" id="tab-timing">
+    <div class="timing-card">
+      <div class="timing-label">Current Offset</div>
+      <div class="timing-display">
+        <button class="nudge" id="nudgeMinus1000">−1s</button>
+        <button class="nudge" id="nudgeMinus500">−0.5s</button>
+        <div class="offset-value" id="offsetDisplay">+0.0 s</div>
+        <button class="nudge" id="nudgePlus500">+0.5s</button>
+        <button class="nudge" id="nudgePlus1000">+1s</button>
+      </div>
+      <div class="offset-sub">positive = subtitle later · negative = subtitle earlier</div>
+    </div>
+
+    <div class="field-row">
+      <label>Custom (ms)</label>
+      <div class="inline-input">
+        <input type="number" id="customOffset" class="input compact" placeholder="e.g. -1200" />
+        <button class="btn primary compact" id="btnApplyOffset">Apply</button>
+      </div>
+    </div>
+
+    <div class="sync-card">
+      <div class="sync-card-title">Sync Now</div>
+      <p class="sync-desc">Enter the subtitle timestamp that matches the current moment, then click Sync.</p>
+      <div class="row-2">
+        <div class="time-input-wrap">
+          <input type="number" id="syncH"  class="input time-part" placeholder="H"  min="0" max="23"  value="0"/>
+          <span>:</span>
+          <input type="number" id="syncM"  class="input time-part" placeholder="MM" min="0" max="59"  value="0"/>
+          <span>:</span>
+          <input type="number" id="syncS"  class="input time-part" placeholder="SS" min="0" max="59"  value="0"/>
+          <span>,</span>
+          <input type="number" id="syncMs" class="input time-part wide" placeholder="ms" min="0" max="999" value="0"/>
+        </div>
+        <button class="btn accent" id="btnSyncNow">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          Sync
+        </button>
+      </div>
+    </div>
+
+    <div class="field-row margin-top">
+      <label>Show key</label>
+      <input type="text" id="showKey" class="input compact" placeholder="e.g. Breaking Bad S3" />
+    </div>
+    <div class="row-2">
+      <button class="btn secondary compact" id="btnSaveOffset">Save offset</button>
+      <button class="btn secondary compact" id="btnLoadOffset">Load offset</button>
+    </div>
+
+    <div id="savedOffsets" class="saved-offsets hidden"></div>
+    <div id="timingStatus" class="status-msg hidden"></div>
+  </section>
+
+  <!-- SETTINGS TAB -->
+  <section class="tab-content hidden" id="tab-settings">
+    <div class="settings-group">
+      <label class="settings-label">SubDL API Key</label>
+      <div class="inline-input">
+        <input type="password" id="apiKey" class="input compact" placeholder="Your SubDL API key" />
+        <button class="btn secondary compact" id="btnSaveKey">Save</button>
+      </div>
+      <a href="https://subdl.com/api-doc" target="_blank" class="link-sm">Get free API key ↗</a>
+    </div>
+
+    <div class="settings-group">
+      <label class="settings-label">Font size</label>
+      <div class="slider-row">
+        <input type="range" id="fontSize" min="18" max="52" value="30" class="slider" />
+        <span id="fontSizeVal">30px</span>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <label class="settings-label">Subtitle position (bottom)</label>
+      <div class="slider-row">
+        <input type="range" id="subPosition" min="2" max="30" value="7" class="slider" />
+        <span id="subPositionVal">7%</span>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <label class="settings-label">Background opacity</label>
+      <div class="slider-row">
+        <input type="range" id="bgOpacity" min="0" max="80" value="48" class="slider" />
+        <span id="bgOpacityVal">48%</span>
+      </div>
+    </div>
+
+    <button class="btn secondary full margin-top" id="btnClearAll">Clear all data &amp; subtitles</button>
+    <div id="settingsStatus" class="status-msg hidden"></div>
+  </section>
+
+  <footer>
+    <div id="activeSubInfo" class="active-info">No subtitle loaded</div>
+    <button class="btn ghost small" id="btnClearSub" title="Clear subtitle">✕</button>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
