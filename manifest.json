@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "SubStream — Arabic Subtitles",
+  "name": "SubStream — Subtitles Overlay",
   "short_name": "SubStream",
   "version": "1.1.0",
-  "description": "Add Arabic subtitles to any streaming platform. Search SubDL, load local SRT files or whole season folders, auto-advance between episodes, and fine-tune timing with one click.",
+  "description": "Add subtitles in any language to any streaming platform. Search SubDL, load local SRT files or whole season folders, auto-advance between episodes, and fine-tune timing with one click.",
   "permissions": [
     "storage",
     "activeTab",

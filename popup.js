@@ -11,12 +11,14 @@
   let folderOrder       = [];   // sorted filenames for auto-advance
   let autoAdvance       = false;
   let searchMode        = 'title';
+  let searchLanguage    = 'AR';
   let advancePollBase   = 0;    // last seen autoAdvancePending value
 
   // ── Init ─────────────────────────────────────────────────────────────────
   const stored = await chrome.storage.local.get([
     'apiKey','offsetMs','activeSubtitleName','savedOffsets',
-    'subSettings','folderFiles','autoAdvance','autoAdvancePending'
+    'subSettings','folderFiles','autoAdvance','autoAdvancePending',
+    'searchLanguage'
   ]);
 
   apiKey             = stored.apiKey || '';
@@ -26,6 +28,7 @@
   autoAdvance        = !!stored.autoAdvance;
   advancePollBase    = stored.autoAdvancePending || 0;
   folderOrder        = Object.keys(folderFiles).sort();
+  searchLanguage     = stored.searchLanguage || 'AR';
 
   document.getElementById('apiKey').value = apiKey;
   document.getElementById('autoAdvanceToggle').checked = autoAdvance;
@@ -33,6 +36,8 @@
   updateFooter();
   loadSavedOffsetsList();
   applyStoredSettings(stored.subSettings);
+  const langEl = document.getElementById('searchLanguage');
+  if (langEl) langEl.value = searchLanguage;
 
   if (folderOrder.length > 0) {
     document.getElementById('advanceRow').style.display = 'flex';
@@ -109,6 +114,10 @@
   });
 
   document.getElementById('btnSearch').addEventListener('click', doSearch);
+  document.getElementById('searchLanguage').addEventListener('change', async (e) => {
+    searchLanguage = e.target.value || 'AR';
+    await chrome.storage.local.set({ searchLanguage });
+  });
 
   async function doSearch() {
     if (!apiKey) {
@@ -117,7 +126,7 @@
     }
 
     // Build params — api_key must be present, background will put it in query string
-    const params = { api_key: apiKey, type: 'all' };
+    const params = { api_key: apiKey, type: 'all', languages: (searchLanguage || 'AR') };
 
     if (searchMode === 'title') {
       const title = document.getElementById('searchTitle').value.trim();
@@ -145,7 +154,7 @@
     if (!res.ok) { showStatus('searchStatus', '⚠ ' + res.error, 'error'); return; }
 
     const subs = res.data?.subtitles || [];
-    if (!subs.length) { showStatus('searchStatus', 'No Arabic subtitles found.', 'info'); return; }
+    if (!subs.length) { showStatus('searchStatus', 'No subtitles found for the selected language.', 'info'); return; }
 
     hideStatus('searchStatus');
     renderSearchResults(subs);
@@ -167,7 +176,7 @@
       item.innerHTML = `
         <div class="result-info">
           <div class="result-name" title="${esc(sub.release_name||'')}">${esc(sub.release_name||'Untitled')}</div>
-          <div class="result-meta">${esc(meta)} · AR</div>
+          <div class="result-meta">${esc(meta)} · ${esc(searchLanguage || 'AR')}</div>
         </div>
         <button class="result-load">Load</button>`;
       item.querySelector('.result-load').addEventListener('click', async (e) => {

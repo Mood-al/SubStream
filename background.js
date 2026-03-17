@@ -22,7 +22,7 @@ async function searchSubDL(params) {
   // Build query — SubDL wants api_key as a query param, NOT a header
   const url = new URL(`${SUBDL_BASE}/subtitles`);
   url.searchParams.set('api_key', params.api_key);
-  url.searchParams.set('languages', 'AR');
+  url.searchParams.set('languages', params.languages || 'AR');
   url.searchParams.set('subs_per_page', '30');
 
   // Map popup params to SubDL API fields

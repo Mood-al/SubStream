@@ -15,7 +15,7 @@
   // ── Font ──────────────────────────────────────────────────────────────────
   // Cairo: wide, clean, purpose-built for Arabic on screens
   const FONT_URL = 'https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&display=swap';
-  const FONT_FAMILY = '"Cairo","Noto Naskh Arabic","Amiri","Traditional Arabic",sans-serif';
+  const FONT_FAMILY = '"Cairo","Inter","Noto Sans","Noto Naskh Arabic","Amiri","Traditional Arabic",sans-serif';
 
   function injectFont() {
     if (document.getElementById('substream-font')) return;
@@ -63,8 +63,8 @@
     'line-height:1.75',
     'color:#ffffff',
     'text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 2px 10px rgba(0,0,0,0.95)',
-    'direction:rtl',
-    'unicode-bidi:bidi-override',
+    'direction:auto',
+    'unicode-bidi:plaintext',
     'background:rgba(0,0,0,0.48)',
     'padding:4px 22px 8px',
     'border-radius:6px',
