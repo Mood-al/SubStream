@@ -81,15 +81,160 @@
     return document.fullscreenElement || document.webkitFullscreenElement || null;
   }
 
-  function correctParent() {
-    return fsRoot() || document.body;
+  // ── Deep video discovery (shadow DOM, nested iframes) ─────────────────────
+  // Disney+, BBC iPlayer, and others hide <video> inside open shadow roots.
+  let cachedVideo = null;
+
+  function collectVideos(root, out, seenRoots) {
+    if (!root || seenRoots.has(root)) return;
+    seenRoots.add(root);
+
+    try {
+      root.querySelectorAll('video').forEach(v => out.push(v));
+    } catch (_) {}
+
+    let elements = [];
+    try {
+      elements = root.querySelectorAll ? root.querySelectorAll('*') : [];
+    } catch (_) {
+      return;
+    }
+
+    for (const el of elements) {
+      if (el.shadowRoot) collectVideos(el.shadowRoot, out, seenRoots);
+      if (el.tagName === 'IFRAME') {
+        try {
+          const doc = el.contentDocument;
+          if (doc) collectVideos(doc, out, seenRoots);
+        } catch (_) {}
+      }
+    }
+  }
+
+  function scoreVideo(v) {
+    if (!v?.isConnected) return -1;
+    const rect = v.getBoundingClientRect();
+    const area = rect.width * rect.height;
+    if (area < 100) return -1;
+
+    let score = area;
+    if (!v.paused) score += 1e6;
+    if (v.readyState >= 2) score += 1e5;
+    if (v.currentTime > 0) score += 1e4;
+    return score;
+  }
+
+  function pickBestVideo(videos) {
+    let best = null;
+    let bestScore = -1;
+    for (const v of videos) {
+      const s = scoreVideo(v);
+      if (s > bestScore) { bestScore = s; best = v; }
+    }
+    return best;
+  }
+
+  function findAllVideos() {
+    const videos = [];
+    collectVideos(document, videos, new WeakSet());
+    return videos;
+  }
+
+  function getVideo() {
+    if (cachedVideo?.isConnected && scoreVideo(cachedVideo) >= 0) {
+      return cachedVideo;
+    }
+
+    // Fast path for Disney+
+    const disneyHost = document.querySelector('disney-web-player');
+    const disneyVideo = disneyHost?.shadowRoot?.querySelector('video');
+    if (disneyVideo?.isConnected) {
+      cachedVideo = disneyVideo;
+      return cachedVideo;
+    }
+
+    cachedVideo = pickBestVideo(findAllVideos());
+    return cachedVideo;
+  }
+
+  function getMountRoot() {
+    const video = getVideo();
+    const fs = fsRoot();
+
+    if (fs) {
+      if (video && (fs.contains(video) || nodeInTree(fs, video))) return fs;
+      return fs;
+    }
+
+    if (video) {
+      const root = video.getRootNode?.();
+      if (root instanceof ShadowRoot) return root;
+    }
+
+    return document.body;
+  }
+
+  function nodeInTree(root, node) {
+    if (!root || !node) return false;
+    if (root === node) return true;
+    if (root.contains?.(node)) return true;
+
+    let elements = [];
+    try {
+      elements = root.querySelectorAll ? root.querySelectorAll('*') : [];
+    } catch (_) {
+      return false;
+    }
+
+    for (const el of elements) {
+      if (el.shadowRoot && nodeInTree(el.shadowRoot, node)) return true;
+      if (el.tagName === 'IFRAME') {
+        try {
+          const doc = el.contentDocument;
+          if (doc && nodeInTree(doc, node)) return true;
+        } catch (_) {}
+      }
+    }
+    return false;
+  }
+
+  function findOverlay() {
+    const direct = document.getElementById('substream-overlay');
+    if (direct) return direct;
+
+    const roots = [document];
+    const seen = new WeakSet();
+    while (roots.length) {
+      const root = roots.pop();
+      if (!root || seen.has(root)) continue;
+      seen.add(root);
+
+      const found = root.getElementById?.('substream-overlay');
+      if (found) return found;
+
+      let elements = [];
+      try {
+        elements = root.querySelectorAll ? root.querySelectorAll('*') : [];
+      } catch (_) {
+        continue;
+      }
+      for (const el of elements) {
+        if (el.shadowRoot) roots.push(el.shadowRoot);
+      }
+    }
+    return null;
+  }
+
+  function removeOverlay() {
+    const el = findOverlay();
+    if (el) el.remove();
   }
 
   // ── Overlay management ────────────────────────────────────────────────────
   function createOverlay() {
-    const old = document.getElementById('substream-overlay');
-    if (old) old.remove();
+    removeOverlay();
 
+    const mount = getMountRoot();
     const wrap = document.createElement('div');
     wrap.id = 'substream-overlay';
     wrap.style.cssText = overlayCSS(!!fsRoot());
@@ -99,27 +244,31 @@
     txt.style.cssText = TEXT_CSS;
 
     wrap.appendChild(txt);
-    correctParent().appendChild(wrap);
+    mount.appendChild(wrap);
   }
 
   function ensureOverlay() {
-    const wrap = document.getElementById('substream-overlay');
-    const parent = correctParent();
+    const mount = getMountRoot();
+    let wrap = findOverlay();
 
     if (!wrap) { createOverlay(); return; }
 
-    if (wrap.parentElement !== parent) {
-      parent.appendChild(wrap);
+    if (wrap.parentNode !== mount) {
+      mount.appendChild(wrap);
     }
-    wrap.style.position = fsRoot() ? 'absolute' : 'fixed';
+    wrap.style.cssText = overlayCSS(!!fsRoot());
   }
 
-  function textEl() { return document.getElementById('substream-text'); }
+  function textEl() {
+    const wrap = findOverlay();
+    return wrap?.querySelector('#substream-text') || document.getElementById('substream-text');
+  }
 
   // ── Fullscreen events ─────────────────────────────────────────────────────
   function onFSChange() {
+    cachedVideo = null;
     ensureOverlay();
-    const w = document.getElementById('substream-overlay');
+    const w = findOverlay();
     if (w) w.style.display = 'block';
   }
   document.addEventListener('fullscreenchange', onFSChange);
@@ -129,22 +278,20 @@
   function startBodyObserver() {
     if (!document.body) { document.addEventListener('DOMContentLoaded', startBodyObserver); return; }
     new MutationObserver(() => {
-      if (!document.getElementById('substream-overlay')) createOverlay();
-    }).observe(document.body, { childList: true });
+      cachedVideo = null;
+      if (!findOverlay() && isActive) createOverlay();
+    }).observe(document.body, { childList: true, subtree: true });
   }
   startBodyObserver();
 
-  // ── Video detection ───────────────────────────────────────────────────────
-  function getVideo() { return document.querySelector('video'); }
-
   // ── Auto-advance: watch for video src change or 'ended' event ────────────
-  let videoEndedBound = false;
   let videoEl = null;
 
   function bindVideoEvents() {
     const v = getVideo();
     if (!v || v === videoEl) return;
     videoEl = v;
+    cachedVideo = v;
 
     // Watch for 'ended' — fires when episode finishes
     v.addEventListener('ended', onVideoEnded);
@@ -162,10 +309,11 @@
     });
   }
 
-  // Poll for video element appearing (SPAs create it late)
+  // Poll for video element appearing (SPAs / shadow-DOM players inject it late)
   setInterval(() => {
     bindVideoEvents();
-    // Detect src change (next episode loaded in same <video> element)
+    if (isActive) ensureOverlay();
+
     const v = getVideo();
     if (v && autoAdvance) {
       const src = v.src || v.currentSrc;
@@ -277,6 +425,7 @@
         break;
 
       case 'SYNC_NOW': {
+        cachedVideo = null;
         const v = getVideo();
         if (!v) { sendResponse({ ok: false, error: 'No video on this page.' }); return true; }
         offsetMs = v.currentTime * 1000 - msg.targetMs;
@@ -293,7 +442,7 @@
 
       case 'TOGGLE_ACTIVE': {
         isActive = msg.active;
-        const w = document.getElementById('substream-overlay');
+        const w = findOverlay();
         if (w) w.style.display = isActive ? 'block' : 'none';
         if (isActive) currentCueIdx = -1;
         sendResponse({ ok: true });

@@ -6,6 +6,7 @@ SubStream adds **subtitles in any language** on top of almost any streaming site
 
 - **Works on any site with a video player**
   - Displays an on-screen subtitle overlay
+  - Supports players that hide the `<video>` tag inside **shadow DOM** (e.g. **Disney+**, BBC iPlayer)
   - Stays visible in **fullscreen**
   - Survives most **page reloads / SPA navigation**
 - **SubDL search built-in**
@@ -39,6 +40,12 @@ SubStream adds **subtitles in any language** on top of almost any streaming site
    - **Search tab**: add your SubDL API key in **Settings**, then search and click **Load**
    - **Local tab**: drop a subtitle file, or load a whole folder
 4. If subtitles are early/late, use the **Timing tab** to nudge or sync.
+
+### Disney+ tips
+
+1. Start playing the show or movie first — Disney+ injects the player after you hit play.
+2. Then open SubStream and load your subtitle file.
+3. If timing is off, use **Sync Now** in the Timing tab.
 
 ## Install (developer / local)
 
