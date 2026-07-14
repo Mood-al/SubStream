@@ -231,7 +231,7 @@
             fb = new Uint8Array(tot); let p=0;
             for (const c of chunks) { fb.set(c,p); p+=c.length; }
           }
-          return new TextDecoder('utf-8').decode(fb);
+          return SubStreamEncoding.decodeSubtitleBytes(fb);
         }
         off = dataOff + compSz;
       } else { off++; }
@@ -322,12 +322,7 @@
   }
 
   function readText(file) {
-    return new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result);
-      r.onerror = rej;
-      r.readAsText(file, 'utf-8');
-    });
+    return SubStreamEncoding.readSubtitleFile(file);
   }
 
   // ═══════════════════════════════════════════════

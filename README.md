@@ -15,6 +15,7 @@ SubStream adds **subtitles in any language** on top of almost any streaming site
   - Choose a subtitle **language** and load it instantly
 - **Local subtitle loading**
   - Load a single `.srt` / `.sub` / `.vtt` file (drag & drop or browse)
+  - Auto-detects common encodings (UTF-8, Windows-1256, ISO-8859-6, and more)
   - Load a **whole folder/season** of subtitle files
   - Built-in library list to quickly switch between files
 - **Auto-advance episodes**

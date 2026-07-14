@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "SubStream — Subtitles Overlay",
   "short_name": "SubStream",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Add subtitles in any language to any streaming platform. Search SubDL, load local SRT files or whole season folders, auto-advance between episodes, and fine-tune timing with one click.",
   "permissions": [
     "storage",
